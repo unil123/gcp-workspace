@@ -12,7 +12,7 @@ jobs:
       id-token: write
       contents: read
 
-    steps:
+    steps: 
     - name: Checkout code
       uses: actions/checkout@v3
 
