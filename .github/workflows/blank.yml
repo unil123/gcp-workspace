@@ -8,19 +8,16 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Authenticate to GCP
-      uses: google-github-actions/auth@v1
+    - name: Authenticate using service account key
+      uses: google-github-actions/setup-gcloud@v1
       with:
-        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-        service_account: ${{ secrets.GCP_SA_EMAIL }}
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+        project_id: hopeful-subject-475706-d5
+        export_default_credentials: true
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
