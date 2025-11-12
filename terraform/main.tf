@@ -1,4 +1,5 @@
 resource "google_storage_bucket" "my_bucket" {
-  name     = "tf-state-unil-20251112"
+  name     = "my-unique-bucket-name-123"
   location = "US"
 }
+
