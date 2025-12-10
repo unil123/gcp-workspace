@@ -1,4 +1,7 @@
-terraform { # Configure the Google Cloud Storage backend
-  backend "gcs" { # GCS backend configuration
-  }
-}
+#terraform {
+#  backend "gcs" {
+#   bucket  = "my-unique-bucket-name-123"
+#   prefix  = "terraform/state"
+# }
+#}
+
