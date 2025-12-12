@@ -1,0 +1,48 @@
+name: gcs buckets CD Apply
+"on":
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - stage
+          - production
+   
+jobs:
+  deploy:
+    name: Deploy GCS buckets
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.env }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.5
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Resolve environment
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT_ENV="${{ github.event.inputs.env }}"
+          case "$INPUT_ENV" in
+            test|stage|production)
+              echo "env=$INPUT_ENV" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error:: Invalid environment: $INPUT_ENV"
+              exit 1
+              ;;
+          esac  
+            WORK_DIR="terraform/gcs-buckets-bu/envs/${INPUT_ENV}"
+            echo "work_dir=${WORK_DIR}" >> "$GITHUB_OUTPUT"
+                
