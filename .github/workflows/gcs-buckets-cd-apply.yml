@@ -1,19 +1,74 @@
-name: Test GCS Buckets CD Apply
+name: gcs-buckets-bu-cd-apply
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [test, stage, main]
+    paths:
+      - 'terraform/modules/gcs-buckets-bu/*'
+      - 'terraform/gcs-buckets-bu/envs/*'
+      - 'github/workflows/gcs-buckets-bu-ci-validation.yaml'
+      - 'github/workflows/gcs-buckets-bu-cd-apply.yaml'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TFLOCK_TIMEOUT: 605
 
 jobs:
-  test:
+  gcs-buckets-bu-apply:
+    name: "CD ${{ github.ref_name == 'main' && 'production' || github.ref_name }}"
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: cd-${{ github.ref_name == 'main' && 'production' || github.ref_name }}
+      cancel-in-progress: false
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Run a simple test
-        run: echo "Hello from GitHub Actions!"
+      - name: Checkout (merged target)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Resolve env & workdir
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          ENV="${{ github.ref_name == 'main' && 'production' || github.ref_name }}"
+          case "$ENV" in test|stage|production) ;; *) echo "::error:: Invalid env '$ENV'"; exit 1 ;; esac
+          WORK_DIR="terraform/gcs-buckets-bu/envs/${ENV}"
+          BACKEND_PREFIX="terraform/state/gcs-buckets-bu/envs/${ENV}"
+          if [ ! -d "$WORK_DIR" ] || ! compgen -G "${WORK_DIR}/*.tf" > /dev/null; then
+            echo "::error:: No Terraform files for env='${ENV}' in '${WORK_DIR}'" exit 1
+          fi
+          echo "env=${ENV}" >> "$GITHUB_OUTPUT"
+          echo "work_dir=${WORK_DIR}" >> "$GITHUB_OUTPUT"
+          echo "backend_prefix=${BACKEND_PREFIX}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate paths scope GCS buckets only
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "### Validating workflow is scoped to GCS buckets paths only"
+          echo "environment: ${{ steps.resolve.outputs.env }}"
+          echo "workdir: ${{ steps.resolve.outputs.work_dir }}"
+          echo "backend prefix: ${{ steps.resolve.outputs.backend_prefix }}"
+
+          if [[ steps.resolve.outputs.work dir  ]]; then
+            echo "::error:: Workdir is not set"; exit 1
+          fi
+          done
+          echo "All changed files are within GCS buckets scope."
